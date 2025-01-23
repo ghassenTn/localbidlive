@@ -1,0 +1,97 @@
+{% extends 'base/base.html' %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% trans "Edit Profile" %}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">{% trans "Edit Profile" %}</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="business_name" class="form-label">{% trans "Business Name" %}</label>
+                            <input type="text" class="form-control" id="business_name" name="business_name"
+                                   value="{{ profile.business_name }}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="phone_number" class="form-label">{% trans "Phone Number" %}</label>
+                            <input type="tel" class="form-control" id="phone_number" name="phone_number"
+                                   value="{{ profile.phone_number }}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="address" class="form-label">{% trans "Address" %}</label>
+                            <textarea class="form-control" id="address" name="address" rows="3">{{ profile.address }}</textarea>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="latitude" class="form-label">{% trans "Latitude" %}</label>
+                                <input type="number" class="form-control" id="latitude" name="latitude"
+                                       value="{{ profile.latitude|default:'' }}" step="any">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="longitude" class="form-label">{% trans "Longitude" %}</label>
+                                <input type="number" class="form-control" id="longitude" name="longitude"
+                                       value="{{ profile.longitude|default:'' }}" step="any">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="is_business" name="is_business"
+                                       {% if profile.is_business %}checked{% endif %}>
+                                <label class="form-check-label" for="is_business">
+                                    {% trans "Register as Business" %}
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="text-end">
+                            <a href="{% url 'accounts:profile' %}" class="btn btn-secondary">
+                                {% trans "Cancel" %}
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                {% trans "Save Changes" %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&libraries=places"></script>
+<script>
+    // Initialize Google Maps Autocomplete
+    function initAutocomplete() {
+        const addressInput = document.getElementById('address');
+        const latitudeInput = document.getElementById('latitude');
+        const longitudeInput = document.getElementById('longitude');
+
+        const autocomplete = new google.maps.places.Autocomplete(addressInput);
+        autocomplete.addListener('place_changed', function() {
+            const place = autocomplete.getPlace();
+            if (place.geometry) {
+                latitudeInput.value = place.geometry.location.lat();
+                longitudeInput.value = place.geometry.location.lng();
+            }
+        });
+    }
+
+    // Load Google Maps API
+    google.maps.event.addDomListener(window, 'load', initAutocomplete);
+</script>
+{% endblock %}
+{% endblock %}

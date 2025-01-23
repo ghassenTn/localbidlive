@@ -1,0 +1,158 @@
+{% extends 'base/base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{% trans "Auctions" %}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Search and Filter Section -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <form method="get" id="search-form" class="d-flex gap-2">
+                <div class="flex-grow-1">
+                    <div class="input-group">
+                        <input type="text" name="q" class="form-control" placeholder="{% trans 'Search auctions...' %}"
+                               value="{{ search_query }}">
+                        <button class="btn btn-primary" type="submit">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+                <select name="category" id="category-filter" class="form-select" style="width: auto;">
+                    <option value="">{% trans "All Categories" %}</option>
+                    {% for category in categories %}
+                        <option value="{{ category.id }}" {% if category.id|stringformat:"s" == selected_category %}selected{% endif %}>
+                            {{ category.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+                <select name="status" id="status-filter" class="form-select" style="width: auto;">
+                    <option value="all" {% if status_filter == 'all' %}selected{% endif %}>{% trans "All Status" %}</option>
+                    <option value="active" {% if status_filter == 'active' %}selected{% endif %}>{% trans "Active" %}</option>
+                    <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>{% trans "Pending" %}</option>
+                </select>
+            </form>
+        </div>
+        <div class="col-md-4 text-end">
+            {% if user.is_authenticated %}
+                <a href="{% url 'auctions:auction_create' %}" class="btn btn-success">
+                    <i class="fas fa-plus-circle me-2"></i>{% trans "Create Auction" %}
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if not auctions %}
+        <div class="alert alert-info text-center">
+            {% trans "No auctions found matching your criteria." %}
+        </div>
+    {% endif %}
+
+    <!-- Auctions Grid -->
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        {% for auction in auctions %}
+            <div class="col">
+                <div class="card h-100 auction-card">
+                    {% if auction.status == 'pending' %}
+                        <div class="position-absolute top-0 end-0 m-2">
+                            <span class="badge bg-warning">{% trans "Pending" %}</span>
+                        </div>
+                    {% endif %}
+                    
+                    {% if auction.images.exists %}
+                        <img src="{{ auction.images.first.image.url }}" class="card-img-top" alt="{{ auction.title }}">
+                    {% else %}
+                        <img src="{% static 'img/no-image.png' %}" class="card-img-top" alt="No Image">
+                    {% endif %}
+                    
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <a href="{% url 'auctions:auction_detail' pk=auction.pk %}" class="text-decoration-none text-dark">
+                                {{ auction.title }}
+                            </a>
+                        </h5>
+                        <p class="card-text text-muted small">
+                            {% trans "Category:" %} 
+                            <a href="{% url 'auctions:category_detail' slug=auction.category.slug %}" class="text-decoration-none">
+                                {{ auction.category.name }}
+                            </a>
+                        </p>
+                        <p class="card-text">{{ auction.description|truncatechars:100 }}</p>
+                    </div>
+                    
+                    <div class="card-footer bg-white">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong class="text-primary">${{ auction.current_price }}</strong>
+                                {% if auction.bids.exists %}
+                                    <small class="text-muted ms-2">{{ auction.bids.count }} {% trans "bid(s)" %}</small>
+                                {% endif %}
+                            </div>
+                            <div class="text-end">
+                                {% if auction.status == 'pending' %}
+                                    <small class="text-muted">
+                                        {% trans "Starts" %} {{ auction.start_time|date:"M d, Y H:i" }}
+                                    </small>
+                                {% else %}
+                                    <small class="text-muted">
+                                        {% trans "Ends" %} {{ auction.end_time|date:"M d, Y H:i" }}
+                                    </small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    {% if auctions.has_other_pages %}
+        <nav aria-label="{% trans 'Auction pagination' %}" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if auctions.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ auctions.previous_page_number }}&q={{ search_query }}&category={{ selected_category }}&status={{ status_filter }}">
+                            {% trans "Previous" %}
+                        </a>
+                    </li>
+                {% endif %}
+
+                {% for num in auctions.paginator.page_range %}
+                    {% if auctions.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                    {% else %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}&q={{ search_query }}&category={{ selected_category }}&status={{ status_filter }}">
+                                {{ num }}
+                            </a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if auctions.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ auctions.next_page_number }}&q={{ search_query }}&category={{ selected_category }}&status={{ status_filter }}">
+                            {% trans "Next" %}
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    {% endif %}
+</div>
+
+{% block extra_js %}
+<script>
+    // Auto-submit form when filters change
+    document.getElementById('category-filter').addEventListener('change', function() {
+        document.getElementById('search-form').submit();
+    });
+    document.getElementById('status-filter').addEventListener('change', function() {
+        document.getElementById('search-form').submit();
+    });
+</script>
+{% endblock %}
+{% endblock %}

@@ -1,0 +1,258 @@
+{% extends 'base/base.html' %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% trans "Edit Auction" %} - {{ auction.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">{% trans "Edit Auction" %} - {{ auction.title }}</h4>
+                </div>
+                <div class="card-body">
+                    {% if auction.status == 'ended' %}
+                        <div class="alert alert-warning">
+                            {% trans "This auction has ended and cannot be edited." %}
+                        </div>
+                    {% elif auction.bids.exists %}
+                        <div class="alert alert-warning">
+                            {% trans "This auction has bids and some fields cannot be edited." %}
+                        </div>
+                    {% endif %}
+
+                    <form method="post" enctype="multipart/form-data" id="auction-form">
+                        {% csrf_token %}
+
+                        <!-- Basic Information -->
+                        <h5 class="mb-3">{% trans "Basic Information" %}</h5>
+                        <div class="mb-3">
+                            <label for="title" class="form-label">{% trans "Title" %}</label>
+                            <input type="text" class="form-control" id="title" name="title" 
+                                   value="{{ auction.title }}" required
+                                   {% if auction.bids.exists %}readonly{% endif %}>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">{% trans "Description" %}</label>
+                            <textarea class="form-control" id="description" name="description" 
+                                    rows="4" required>{{ auction.description }}</textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="category" class="form-label">{% trans "Category" %}</label>
+                            <select class="form-select" id="category" name="category" required
+                                    {% if auction.bids.exists %}disabled{% endif %}>
+                                <option value="">{% trans "Select a category" %}</option>
+                                {% for category in categories %}
+                                    <option value="{{ category.id }}" 
+                                            {% if category.id == auction.category.id %}selected{% endif %}>
+                                        {{ category.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Pricing -->
+                        <h5 class="mb-3 mt-4">{% trans "Pricing" %}</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="start_price" class="form-label">{% trans "Start Price" %}</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" class="form-control" id="start_price" name="start_price"
+                                               step="0.01" min="0.01" value="{{ auction.start_price }}" required
+                                               {% if auction.bids.exists %}readonly{% endif %}>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="reserve_price" class="form-label">{% trans "Reserve Price" %} ({% trans "Optional" %})</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" class="form-control" id="reserve_price" name="reserve_price"
+                                               step="0.01" min="0.01" value="{{ auction.reserve_price }}"
+                                               {% if auction.bids.exists %}readonly{% endif %}>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Timing -->
+                        <h5 class="mb-3 mt-4">{% trans "Auction Duration" %}</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="start_time" class="form-label">{% trans "Start Time" %}</label>
+                                    <input type="datetime-local" class="form-control" id="start_time" name="start_time"
+                                           value="{{ auction.start_time|date:'Y-m-d\TH:i' }}" required
+                                           {% if auction.status != 'pending' %}readonly{% endif %}>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="end_time" class="form-label">{% trans "End Time" %}</label>
+                                    <input type="datetime-local" class="form-control" id="end_time" name="end_time"
+                                           value="{{ auction.end_time|date:'Y-m-d\TH:i' }}" required
+                                           {% if auction.status == 'ended' %}readonly{% endif %}>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Location -->
+                        <h5 class="mb-3 mt-4">{% trans "Location" %}</h5>
+                        <div class="mb-3">
+                            <label for="location" class="form-label">{% trans "Address" %}</label>
+                            <input type="text" class="form-control" id="location" name="location" 
+                                   value="{{ auction.location }}" required>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="latitude" class="form-label">{% trans "Latitude" %}</label>
+                                    <input type="number" class="form-control" id="latitude" name="latitude" 
+                                           step="any" min="-90" max="90" value="{{ auction.latitude }}"
+                                           placeholder="e.g., 40.7128" required>
+                                    <div class="form-text">{% trans "Enter a value between -90 and 90" %}</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="longitude" class="form-label">{% trans "Longitude" %}</label>
+                                    <input type="number" class="form-control" id="longitude" name="longitude" 
+                                           step="any" min="-180" max="180" value="{{ auction.longitude }}"
+                                           placeholder="e.g., -74.0060" required>
+                                    <div class="form-text">{% trans "Enter a value between -180 and 180" %}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Images -->
+                        <h5 class="mb-3 mt-4">{% trans "Images" %}</h5>
+                        
+                        <!-- Existing Images -->
+                        <div class="mb-3">
+                            <label class="form-label">{% trans "Current Images" %}</label>
+                            <div class="row g-2">
+                                {% for image in auction.images.all %}
+                                <div class="col-md-4">
+                                    <div class="card h-100">
+                                        <img src="{{ image.image.url }}" class="card-img-top" 
+                                             style="height: 200px; object-fit: cover;" alt="{{ auction.title }}">
+                                        <div class="card-body p-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" 
+                                                       name="delete_images" value="{{ image.id }}"
+                                                       id="delete_image_{{ image.id }}"
+                                                       {% if image.is_primary %}disabled{% endif %}>
+                                                <label class="form-check-label" for="delete_image_{{ image.id }}">
+                                                    {% if image.is_primary %}
+                                                        {% trans "Primary Image" %}
+                                                    {% else %}
+                                                        {% trans "Delete" %}
+                                                    {% endif %}
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- New Images -->
+                        <div class="mb-3">
+                            <label for="images" class="form-label">{% trans "Add New Images" %}</label>
+                            <input type="file" class="form-control" id="images" name="images" 
+                                   accept="image/*" multiple>
+                            <div class="form-text">{% trans "You can select multiple new images to add" %}</div>
+                        </div>
+                        <div id="image-preview" class="row g-2 mb-3"></div>
+
+                        <div class="d-grid gap-2">
+                            {% if auction.status != 'ended' %}
+                                <button type="submit" class="btn btn-primary">
+                                    {% trans "Save Changes" %}
+                                </button>
+                            {% endif %}
+                            <a href="{% url 'auctions:auction_detail' pk=auction.pk %}" class="btn btn-secondary">
+                                {% trans "Back to Auction" %}
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Image Preview
+    document.getElementById('images').addEventListener('change', function(e) {
+        const previewContainer = document.getElementById('image-preview');
+        previewContainer.innerHTML = '';
+        
+        Array.from(e.target.files).forEach((file, index) => {
+            const reader = new FileReader();
+            const col = document.createElement('div');
+            col.className = 'col-md-4';
+            
+            const card = document.createElement('div');
+            card.className = 'card h-100';
+            
+            const img = document.createElement('img');
+            img.className = 'card-img-top';
+            img.style.height = '200px';
+            img.style.objectFit = 'cover';
+            
+            reader.onload = function(e) {
+                img.src = e.target.result;
+            };
+            
+            card.appendChild(img);
+            col.appendChild(card);
+            previewContainer.appendChild(col);
+            reader.readAsDataURL(file);
+        });
+    });
+
+    // Form Validation
+    document.getElementById('auction-form').addEventListener('submit', function(e) {
+        const startTime = new Date(document.getElementById('start_time').value);
+        const endTime = new Date(document.getElementById('end_time').value);
+        const now = new Date();
+        
+        {% if auction.status == 'pending' %}
+        if (startTime <= now) {
+            e.preventDefault();
+            alert("{% trans 'Start time must be in the future.' %}");
+            return;
+        }
+        {% endif %}
+        
+        if (endTime <= startTime) {
+            e.preventDefault();
+            alert("{% trans 'End time must be after start time.' %}");
+            return;
+        }
+        
+        {% if not auction.bids.exists %}
+        const startPrice = parseFloat(document.getElementById('start_price').value);
+        const reservePrice = document.getElementById('reserve_price').value;
+        
+        if (reservePrice && parseFloat(reservePrice) < startPrice) {
+            e.preventDefault();
+            alert("{% trans 'Reserve price must be greater than or equal to start price.' %}");
+            return;
+        }
+        {% endif %}
+    });
+</script>
+{% endblock %}

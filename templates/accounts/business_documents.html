@@ -1,0 +1,151 @@
+{% extends 'base/base.html' %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% trans "Business Documents" %}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">{% trans "Business Documents" %}</h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Document Type" %}</th>
+                                    <th>{% trans "Uploaded" %}</th>
+                                    <th>{% trans "Status" %}</th>
+                                    <th>{% trans "Actions" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for document in documents %}
+                                <tr>
+                                    <td>{{ document.document_type }}</td>
+                                    <td>{{ document.uploaded_at|date }}</td>
+                                    <td>
+                                        {% if document.is_verified %}
+                                            <span class="badge bg-success">{% trans "Verified" %}</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">{% trans "Pending" %}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ document.document_file.url }}" class="btn btn-sm btn-info" target="_blank">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal"
+                                                data-bs-target="#deleteModal{{ document.id }}">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                
+                                <!-- Delete Modal -->
+                                <div class="modal fade" id="deleteModal{{ document.id }}" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">{% trans "Confirm Delete" %}</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                {% trans "Are you sure you want to delete this document?" %}
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                                    {% trans "Cancel" %}
+                                                </button>
+                                                <form method="post" action="{% url 'accounts:delete_document' document.id %}">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-danger">
+                                                        {% trans "Delete" %}
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">
+                                        {% trans "No documents uploaded yet." %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">{% trans "Upload Document" %}</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="document_type" class="form-label">{% trans "Document Type" %}</label>
+                            <select class="form-select" id="document_type" name="document_type" required>
+                                <option value="">{% trans "Select document type" %}</option>
+                                <option value="business_license">{% trans "Business License" %}</option>
+                                <option value="tax_certificate">{% trans "Tax Certificate" %}</option>
+                                <option value="id_proof">{% trans "ID Proof" %}</option>
+                                <option value="other">{% trans "Other" %}</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="document" class="form-label">{% trans "Document File" %}</label>
+                            <input type="file" class="form-control" id="document" name="document" required>
+                            <div class="form-text">
+                                {% trans "Accepted formats: PDF, JPG, PNG (max 5MB)" %}
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-upload me-2"></i> {% trans "Upload Document" %}
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h4 class="mb-0">{% trans "Document Guidelines" %}</h4>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            {% trans "Documents must be clear and legible" %}
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            {% trans "All information must be current and valid" %}
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            {% trans "Maximum file size: 5MB per document" %}
+                        </li>
+                        <li>
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            {% trans "Verification may take 1-2 business days" %}
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

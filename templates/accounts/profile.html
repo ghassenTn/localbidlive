@@ -1,0 +1,146 @@
+{% extends 'base/base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{% trans "Profile" %} - {{ profile.user.username }}{% endblock %}
+
+{% block content %}
+<div class="profile-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-3 text-center text-md-start">
+                <img src="{% if profile.user.socialaccount_set.first.get_avatar_url %}{{ profile.user.socialaccount_set.first.get_avatar_url }}{% else %}{% static 'img/default-avatar.png' %}{% endif %}"
+                     alt="{{ profile.user.username }}" class="profile-avatar">
+            </div>
+            <div class="col-md-9">
+                <h1>{{ profile.user.get_full_name|default:profile.user.username }}</h1>
+                {% if profile.business_name %}
+                    <p class="lead mb-0">{{ profile.business_name }}</p>
+                {% endif %}
+                <p class="text-white-50">{% trans "Member since" %} {{ profile.user.date_joined|date }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">{% trans "Contact Information" %}</h5>
+                    <p><i class="fas fa-envelope me-2"></i> {{ profile.user.email }}</p>
+                    {% if profile.phone_number %}
+                        <p><i class="fas fa-phone me-2"></i> {{ profile.phone_number }}</p>
+                    {% endif %}
+                    {% if profile.address %}
+                        <p><i class="fas fa-map-marker-alt me-2"></i> {{ profile.address }}</p>
+                    {% endif %}
+                    <a href="{% url 'accounts:profile_edit' %}" class="btn btn-primary">
+                        <i class="fas fa-edit me-2"></i> {% trans "Edit Profile" %}
+                    </a>
+                </div>
+            </div>
+
+            {% if profile.is_business %}
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">{% trans "Business Documents" %}</h5>
+                    <ul class="list-unstyled">
+                        {% for doc in profile.user.business_documents.all %}
+                            <li class="mb-2">
+                                <i class="fas fa-file me-2"></i>
+                                {{ doc.document_type }}
+                                {% if doc.is_verified %}
+                                    <span class="badge bg-success">{% trans "Verified" %}</span>
+                                {% else %}
+                                    <span class="badge bg-warning">{% trans "Pending" %}</span>
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                    <a href="{% url 'accounts:business_documents' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-upload me-2"></i> {% trans "Manage Documents" %}
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <ul class="nav nav-tabs" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-bs-toggle="tab" href="#auctions">
+                                {% trans "My Auctions" %}
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#bids">
+                                {% trans "My Bids" %}
+                            </a>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content pt-4">
+                        <div class="tab-pane fade show active" id="auctions">
+                            {% for auction in profile.user.auctions.all %}
+                                <div class="card mb-3">
+                                    <div class="row g-0">
+                                        <div class="col-md-4">
+                                            {% if auction.images.first %}
+                                                <img src="{{ auction.images.first.image.url }}" class="img-fluid rounded-start" alt="{{ auction.title }}">
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-8">
+                                            <div class="card-body">
+                                                <h5 class="card-title">{{ auction.title }}</h5>
+                                                <p class="card-text">{{ auction.description|truncatewords:30 }}</p>
+                                                <p class="card-text">
+                                                    <small class="text-muted">
+                                                        {% trans "Current Price" %}: ${{ auction.current_price }}
+                                                    </small>
+                                                </p>
+                                                <a href="{% url 'auctions:auction_detail' pk=auction.pk %}" class="btn btn-sm btn-primary">
+                                                    {% trans "View Details" %}
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% empty %}
+                                <p class="text-muted">{% trans "No auctions yet." %}</p>
+                            {% endfor %}
+                        </div>
+
+                        <div class="tab-pane fade" id="bids">
+                            {% for bid in profile.user.bids.all %}
+                                <div class="card mb-3">
+                                    <div class="card-body">
+                                        <h5 class="card-title">{{ bid.auction.title }}</h5>
+                                        <p class="card-text">
+                                            {% trans "Your Bid" %}: ${{ bid.amount }}<br>
+                                            {% trans "Current Price" %}: ${{ bid.auction.current_price }}
+                                        </p>
+                                        <p class="card-text">
+                                            <small class="text-muted">
+                                                {% trans "Bid placed on" %} {{ bid.created_at|date }}
+                                            </small>
+                                        </p>
+                                        <a href="{% url 'auctions:auction_detail' pk=bid.auction.pk %}" class="btn btn-sm btn-primary">
+                                            {% trans "View Auction" %}
+                                        </a>
+                                    </div>
+                                </div>
+                            {% empty %}
+                                <p class="text-muted">{% trans "No bids placed yet." %}</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

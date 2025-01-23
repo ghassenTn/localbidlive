@@ -1,0 +1,116 @@
+{% extends 'base/base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Notification Preferences" %}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">{% trans "Notification Preferences" %}</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <!-- Notification Channels -->
+                        <h5 class="mb-3">{% trans "Notification Channels" %}</h5>
+                        <div class="mb-4">
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="email_notifications"
+                                       name="email_notifications" {% if preferences.email_notifications %}checked{% endif %}>
+                                <label class="form-check-label" for="email_notifications">
+                                    <i class="fas fa-envelope me-2"></i>{% trans "Email Notifications" %}
+                                </label>
+                                <div class="form-text">{% trans "Receive notifications via email" %}</div>
+                            </div>
+
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="push_notifications"
+                                       name="push_notifications" {% if preferences.push_notifications %}checked{% endif %}>
+                                <label class="form-check-label" for="push_notifications">
+                                    <i class="fas fa-bell me-2"></i>{% trans "Push Notifications" %}
+                                </label>
+                                <div class="form-text">{% trans "Receive notifications in your browser" %}</div>
+                            </div>
+                        </div>
+
+                        <!-- Auction Notifications -->
+                        <h5 class="mb-3">{% trans "Auction Notifications" %}</h5>
+                        <div class="mb-4">
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="auction_start_reminder"
+                                       name="auction_start_reminder" {% if preferences.auction_start_reminder %}checked{% endif %}>
+                                <label class="form-check-label" for="auction_start_reminder">
+                                    <i class="fas fa-play me-2"></i>{% trans "Auction Start Reminder" %}
+                                </label>
+                                <div class="form-text">{% trans "Get notified when auctions you're watching are about to start" %}</div>
+                            </div>
+
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="new_bid_alert"
+                                       name="new_bid_alert" {% if preferences.new_bid_alert %}checked{% endif %}>
+                                <label class="form-check-label" for="new_bid_alert">
+                                    <i class="fas fa-gavel me-2"></i>{% trans "New Bid Alert" %}
+                                </label>
+                                <div class="form-text">{% trans "Get notified when someone bids on your auctions" %}</div>
+                            </div>
+
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="outbid_alert"
+                                       name="outbid_alert" {% if preferences.outbid_alert %}checked{% endif %}>
+                                <label class="form-check-label" for="outbid_alert">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>{% trans "Outbid Alert" %}
+                                </label>
+                                <div class="form-text">{% trans "Get notified when someone outbids you" %}</div>
+                            </div>
+
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="auction_end_reminder"
+                                       name="auction_end_reminder" {% if preferences.auction_end_reminder %}checked{% endif %}>
+                                <label class="form-check-label" for="auction_end_reminder">
+                                    <i class="fas fa-clock me-2"></i>{% trans "Auction End Reminder" %}
+                                </label>
+                                <div class="form-text">{% trans "Get notified when auctions you're watching are about to end" %}</div>
+                            </div>
+                        </div>
+
+                        <!-- Result Notifications -->
+                        <h5 class="mb-3">{% trans "Result Notifications" %}</h5>
+                        <div class="mb-4">
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="auction_won_notification"
+                                       name="auction_won_notification" {% if preferences.auction_won_notification %}checked{% endif %}>
+                                <label class="form-check-label" for="auction_won_notification">
+                                    <i class="fas fa-trophy me-2"></i>{% trans "Auction Won Notification" %}
+                                </label>
+                                <div class="form-text">{% trans "Get notified when you win an auction" %}</div>
+                            </div>
+
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="payment_notification"
+                                       name="payment_notification" {% if preferences.payment_notification %}checked{% endif %}>
+                                <label class="form-check-label" for="payment_notification">
+                                    <i class="fas fa-credit-card me-2"></i>{% trans "Payment Notification" %}
+                                </label>
+                                <div class="form-text">{% trans "Get notified about payment updates" %}</div>
+                            </div>
+                        </div>
+
+                        <div class="text-end">
+                            <a href="{% url 'notifications:notification_list' %}" class="btn btn-secondary me-2">
+                                {% trans "Cancel" %}
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>{% trans "Save Preferences" %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,325 @@
+{% extends 'base/base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block extra_head %}
+<script src="https://unpkg.com/centrifuge@5.0.1/dist/centrifuge.js"></script>
+{% endblock %}
+
+{% block title %}{{ auction.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <!-- Image Gallery -->
+        <div class="col-md-6">
+            <div id="auctionCarousel" class="carousel slide" data-bs-ride="carousel">
+                <div class="carousel-inner">
+                    {% for image in auction.images.all %}
+                        <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                            <img src="{{ image.image.url }}" class="d-block w-100" alt="{{ auction.title }}">
+                        </div>
+                    {% empty %}
+                        <div class="carousel-item active">
+                            <img src="{% static 'img/no-image.png' %}" class="d-block w-100" alt="No Image">
+                        </div>
+                    {% endfor %}
+                </div>
+                {% if auction.images.count > 1 %}
+                    <button class="carousel-control-prev" type="button" data-bs-target="#auctionCarousel" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon"></span>
+                    </button>
+                    <button class="carousel-control-next" type="button" data-bs-target="#auctionCarousel" data-bs-slide="next">
+                        <span class="carousel-control-next-icon"></span>
+                    </button>
+                {% endif %}
+            </div>
+            
+            <!-- Thumbnail Navigation -->
+            {% if auction.images.count > 1 %}
+                <div class="row mt-2">
+                    {% for image in auction.images.all %}
+                        <div class="col-3">
+                            <img src="{{ image.image.url }}" class="img-thumbnail" alt="{{ auction.title }}"
+                                 onclick="$('#auctionCarousel').carousel({{ forloop.counter0 }})">
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Auction Details -->
+        <div class="col-md-6">
+            <h1 class="mb-3">{{ auction.title }}</h1>
+            
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <span class="badge bg-{{ auction.status|yesno:'success,secondary' }} me-2">
+                        {{ auction.get_status_display }}
+                    </span>
+                    <span class="text-muted">
+                        {% trans "Category:" %} {{ auction.category.name }}
+                    </span>
+                </div>
+                {% if user.is_authenticated and auction.seller == user %}
+                    <a href="{% url 'auctions:auction_edit' pk=auction.pk %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-edit"></i> {% trans "Edit" %}
+                    </a>
+                {% endif %}
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <h5>{% trans "Current Price" %}</h5>
+                            <h2 class="text-primary" id="current-price">${{ auction.current_price }}</h2>
+                        </div>
+                        <div class="col-6 text-end">
+                            <h5>{% trans "Time Left" %}</h5>
+                            <h4 class="auction-timer text-danger" id="time-remaining" data-end-time="{{ auction.end_time|date:'c' }}">
+                                <!-- Timer will be updated by JavaScript -->
+                            </h4>
+                        </div>
+                    </div>
+
+                    {% if auction.status == 'active' and user.is_authenticated and auction.seller != user %}
+                        <form id="bid-form" class="bid-form mt-3" data-current-price="{{ auction.current_price }}">
+                            {% csrf_token %}
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" name="amount" class="form-control" step="0.01" min="{{ auction.current_price|add:"0.01" }}" required id="bid-amount">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-gavel me-2"></i>{% trans "Place Bid" %}
+                                </button>
+                            </div>
+                            <small class="form-text text-muted">
+                                {% trans "Minimum bid:" %} ${{ auction.current_price|add:"0.01" }}
+                            </small>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <h5>{% trans "Description" %}</h5>
+                <p>{{ auction.description }}</p>
+            </div>
+
+            <div class="mb-4">
+                <h5>{% trans "Location" %}</h5>
+                <p><i class="fas fa-map-marker-alt me-2"></i>{{ auction.location }}</p>
+                <div id="map" style="height: 200px;" class="rounded"></div>
+            </div>
+
+            <div class="mb-4">
+                <h5>{% trans "Seller Information" %}</h5>
+                <div class="d-flex align-items-center">
+                    <img src="{% if auction.seller.socialaccount_set.first.get_avatar_url %}{{ auction.seller.socialaccount_set.first.get_avatar_url }}{% else %}{% static 'img/default-avatar.png' %}{% endif %}"
+                         alt="{{ auction.seller.username }}" class="rounded-circle me-3" style="width: 50px; height: 50px;">
+                    <div>
+                        <h6 class="mb-0">{{ auction.seller.get_full_name|default:auction.seller.username }}</h6>
+                        {% if auction.seller.profile.business_name %}
+                            <p class="mb-0 text-muted">{{ auction.seller.profile.business_name }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bid History -->
+    <div class="row mt-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">{% trans "Bid History" %}</h5>
+                </div>
+                <div class="card-body bid-history" id="bid-history">
+                    {% for bid in auction.bids.all %}
+                        <div class="bid-history-item">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <strong>${{ bid.amount }}</strong> by {{ bid.user.username }}
+                                </div>
+                                <small class="text-muted">{{ bid.created_at|timesince }} {% trans "ago" %}</small>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <p class="text-muted text-center">{% trans "No bids yet" %}</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">{% trans "Auction Analytics" %}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6 mb-3">
+                            <h6>{% trans "Views" %}</h6>
+                            <h4>{{ auction.analytics.views_count }}</h4>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <h6>{% trans "Unique Viewers" %}</h6>
+                            <h4>{{ auction.analytics.unique_viewers }}</h4>
+                        </div>
+                        <div class="col-6">
+                            <h6>{% trans "Total Bids" %}</h6>
+                            <h4>{{ auction.analytics.bids_count }}</h4>
+                        </div>
+                        <div class="col-6">
+                            <h6>{% trans "Watchers" %}</h6>
+                            <h4>{{ auction.analytics.watchers_count }}</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}"></script>
+<script>
+    // Initialize Google Map
+    function initMap() {
+        const location = {
+            lat: {{ auction.latitude }},
+            lng: {{ auction.longitude }}
+        };
+        const map = new google.maps.Map(document.getElementById('map'), {
+            zoom: 15,
+            center: location
+        });
+        new google.maps.Marker({
+            position: location,
+            map: map
+        });
+    }
+
+    // Load Google Maps
+    google.maps.event.addDomListener(window, 'load', initMap);
+</script>
+
+<script>
+    // Initialize Centrifugo with the correct WebSocket URL
+    const centrifuge = new Centrifuge('ws://localhost:3000/connection/websocket', {
+        debug: true
+    });
+    
+    // Set the token
+    centrifuge.setToken("{{ centrifugo_token|safe }}");
+    
+    // Handle connection error
+    centrifuge.on('error', function(error) {
+        console.error('Centrifugo error:', error);
+    });
+
+    // Handle successful connection
+    centrifuge.on('connected', function(context) {
+        console.log('Connected to Centrifugo:', context);
+    });
+    
+    // Subscribe to auction channel
+    const channel = centrifuge.subscribe("auction.{{ auction.id }}", function(ctx) {
+        const data = ctx.data;
+        
+        if (data.type === 'new_bid') {
+            // Update current price
+            document.getElementById('current-price').textContent = `$${data.current_price}`;
+            
+            // Update total bids
+            const totalBids = parseInt(document.getElementById('total-bids').textContent) + 1;
+            document.getElementById('total-bids').textContent = `${totalBids} {% trans "bid(s)" %}`;
+            
+            // Add new bid to history
+            const bidHistory = document.getElementById('bid-history');
+            const newBid = document.createElement('div');
+            newBid.className = 'list-group-item d-flex justify-content-between align-items-center';
+            newBid.innerHTML = `
+                <div>
+                    <strong>${data.bidder_username}</strong>
+                    <small class="text-muted ms-2">${data.created_at}</small>
+                </div>
+                <span class="badge bg-primary rounded-pill">$${data.amount}</span>
+            `;
+            
+            // Insert at the beginning of the list
+            if (bidHistory.firstChild) {
+                bidHistory.insertBefore(newBid, bidHistory.firstChild);
+            } else {
+                bidHistory.appendChild(newBid);
+            }
+            
+            // Update minimum bid amount
+            const bidInput = document.getElementById('bid-amount');
+            if (bidInput) {
+                bidInput.min = (parseFloat(data.current_price) + 0.01).toFixed(2);
+            }
+        }
+    });
+
+    // Handle bid form submission
+    const bidForm = document.getElementById('bid-form');
+    if (bidForm) {
+        bidForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const amount = parseFloat(document.getElementById('bid-amount').value).toFixed(2);
+            
+            try {
+                const response = await fetch(`/auctions/${auction.id}/bid/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify({ amount: amount })
+                });
+                
+                if (!response.ok) {
+                    const data = await response.json();
+                    alert(data.error || '{% trans "Error placing bid" %}');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('{% trans "Error placing bid" %}');
+            }
+        });
+    }
+
+    // Update time remaining
+    function updateTimeRemaining() {
+        const endTime = new Date("{{ auction.end_time|date:'c' }}").getTime();
+        const now = new Date().getTime();
+        const timeLeft = endTime - now;
+        
+        const timeRemainingElement = document.getElementById('time-remaining');
+        
+        if (timeLeft <= 0) {
+            timeRemainingElement.textContent = '{% trans "Auction ended" %}';
+            if (bidForm) bidForm.style.display = 'none';
+            return;
+        }
+        
+        const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+        
+        timeRemainingElement.textContent = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+    }
+
+    updateTimeRemaining();
+    setInterval(updateTimeRemaining, 1000);
+
+    // Connect to Centrifugo
+    centrifuge.connect();
+</script>
+{% endblock %}
